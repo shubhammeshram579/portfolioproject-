@@ -1,0 +1,117 @@
+select * from portpolio..coviddeaths
+
+--select data that used are going to be using 
+
+select location ,date,total_cases,total_deaths,new_cases,population 
+from portpolio..coviddeaths
+order by 1,2,3
+
+--locking at total cases vs total deaths 
+--show likehood of dying if ypou contract covid in you countery
+
+select location ,date,(total_deaths/total_cases)*100 as deathpercentages 
+from portpolio..coviddeaths
+where location like '%INDIA%'
+order by 1,2,3
+
+
+
+
+--Looking at total cases vs population 
+--show what percentages of population got covind 
+
+select location ,date,(total_cases/population)*100 as deathspercentages  
+from portpolio..coviddeaths
+order by 1,2,3
+
+--looking for all countries total sum deaths and new cases 
+
+select continent, location,sum(population),sum(total_cases),sum(new_cases),sum(population)
+from portpolio..coviddeaths
+where continent is not null
+group by continent,location
+order by location desc
+
+--looking at all  counties max deaths and new cases 
+
+select continent, location,max(population),max(total_cases),max(new_cases),max(population)
+from portpolio..coviddeaths
+where continent is not null
+group by continent,location
+order by location desc
+
+--looking for second  highst death and new cases 
+
+select location,max(total_deaths)
+from portpolio..coviddeaths
+where total_deaths in (select max(total_deaths) from portpolio..coviddeaths)
+group by location
+union
+select location,max(total_cases)
+from portpolio..coviddeaths
+where total_cases in (select max(total_cases) from portpolio..coviddeaths)
+group by location
+
+
+--looking at counties with highste infecctite rate comper to population 
+
+select location ,population,max(total_cases) as highhestpercentagecount ,max((total_cases/population ))*100 as percentagespopulationinfected
+from portpolio..coviddeaths
+group by location,population
+order by 1,2
+
+--showing counties with hihhest deaths count per population
+
+select location ,max(cast(total_deaths as int)) as totaldeathscount
+from portpolio..coviddeaths
+group by location 
+order by totaldeathscount desc
+
+--lest breck this down by continent
+
+select location ,max(cast(total_deaths as int)) as totaldeathscount
+from portpolio..coviddeaths
+where continent is not null
+group by location 
+order by totaldeathscount desc
+
+
+-- continent is null 
+select location ,max(cast(total_deaths as int)) as totaldeathscount
+from portpolio..coviddeaths
+where continent is  null
+group by location 
+order by totaldeathscount desc
+
+
+
+--showing continent with in light death count per population 
+
+select continent ,max(cast(total_deaths as int)) as totaldeathscount
+from portpolio..coviddeaths
+where continent is not null
+group by continent 
+order by totaldeathscount desc
+
+
+select * from portpolio..coviddeaths d
+join portpolio..vaccination v
+on d.location = v.location
+and d.date = v.date
+
+
+drop table if exists pvsd
+with pvsd (location,date,population,new_vaccination,rollingpeoplevaccination)
+as
+(
+select  d.location,d.date,d.population,v.new_vaccinations,sum(convert(int,v.new_vaccinations))
+over (partition by d.location order by d.location,d.date,d.population) as rollingpeoplevaccination
+from portpolio..coviddeaths d
+join portpolio..vaccination v
+on d.location = v.location
+and d.date = v.date 
+where d.continent is not  null 
+order by 2,3
+)
+select * 
+from pvsd
